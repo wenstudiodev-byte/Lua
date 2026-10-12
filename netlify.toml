@@ -1,0 +1,37 @@
+# Konfigurasi deploy Netlify untuk WEN STUDIO Lua Obfuscator
+
+[build]
+  # gen-lua-bundle: siapkan sumber Lua untuk function obfuscate server-side
+  command = "corepack enable && pnpm install && pnpm --filter web exec node scripts/gen-lua-bundle.mjs && pnpm --filter web build -- --base=/"
+  publish = "web/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # pakai pnpm sebagai package manager (repo ini workspace pnpm)
+  NETLIFY_USE_PNPM = "true"
+
+# ===== Functions (obfuscate server-side) =====
+# Hanya dipakai jika kamu mengaktifkan mode server (VITE_SERVER_OBFUSCATE=1).
+# Kalau tetap client-side, bagian ini aman diabaikan.
+[functions]
+  directory = "web/netlify/functions"
+  node_bundler = "esbuild"
+  # wasmoon dikirim apa adanya (butuh file .wasm-nya saat runtime)
+  external_node_modules = ["wasmoon"]
+  included_files = [
+    "web/netlify/functions/_lua-sources.json",
+    "web/netlify/functions/_glue.wasm",
+  ]
+
+# SPA fallback: semua route diarahkan ke index.html.
+# (Path /.netlify/functions/* sudah direserve Netlify, tidak kena aturan ini.)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Pastikan file .wasm dikirim dengan MIME type yang benar
+[[headers]]
+  for = "/assets/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
