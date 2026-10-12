@@ -25,4 +25,4 @@ web/playwright-report
 # Ignore Local Test Files
 test.lua
 test.obfuscated.lua
-config.lua
+/config.lua
