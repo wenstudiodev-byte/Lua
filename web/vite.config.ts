@@ -18,7 +18,7 @@ export default defineConfig(() => {
     // Use repo base path for production/preview, but root path for local dev.
     // This keeps runtime asset URLs (including Wasm files loaded by dependencies)
     // valid in both environments.
-    base: process.env.VITE_BASE ?? "/",
+    base: "/",
     plugins: [
       {
         name: "serve-docs-index-directly",
