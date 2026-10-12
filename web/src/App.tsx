@@ -1,4 +1,4 @@
-import { BookText, Check, Coins, Copy, Download, FileCode2, Loader2, LogOut, Play, RotateCcw, Share2, ShieldCheck, Square, TriangleAlert } from "lucide-react"
+import { BookText, Check, Coins, Copy, Download, FileCode2, Loader2, LogOut, MessageCircle, Play, RotateCcw, Share2, ShieldCheck, Square, TriangleAlert } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
@@ -574,6 +574,15 @@ function Playground({ onOpenAdmin }: { onOpenAdmin: () => void }) {
               <span className="hidden max-w-[160px] truncate text-xs text-muted-foreground sm:inline" title={profile?.email ?? ""}>
                 {profile?.email}
               </span>
+              <a
+                href="https://discord.gg/JHcZhaRv2h"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <MessageCircle className="size-3.5" />
+                Beli Token
+              </a>
               <RedeemDialog />
               {isAdmin ? (
                 <Button variant="outline" size="sm" onClick={onOpenAdmin}>
