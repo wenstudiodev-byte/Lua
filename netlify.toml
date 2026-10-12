@@ -6,7 +6,7 @@
   publish = "web/dist"
 
 [build.environment]
-  NODE_VERSION = "22"
+  NODE_VERSION = "20"
   # pakai pnpm sebagai package manager (repo ini workspace pnpm)
   NETLIFY_USE_PNPM = "true"
 
