@@ -1,6 +1,10 @@
-// Prometheus obfuscation runner. Imports the bundled Prometheus Lua sources —
-// so any chunk that includes this module ships the obfuscation engine.
-import luaSources from "virtual:prometheus-lua"
+// Prometheus obfuscation runner.
+//
+// PERBAIKAN: sumber Lua Prometheus (virtual:prometheus-lua) sekarang di-import
+// secara dinamis (lazy) dengan retry, BUKAN static import. Efeknya chunk
+// prometheusRunner jadi kecil, dan sumber Lua yang besar punya chunk sendiri
+// yang di-download ulang otomatis kalau gagal ("Failed to fetch dynamically
+// imported module"). bootstrapLua juga tidak lagi dibangun saat modul dimuat.
 import type { PrometheusLog, PrometheusOptions, PrometheusResult } from "@/lib/prometheusTypes"
 import { toLuaLongString } from "./luaString"
 import {
@@ -14,6 +18,20 @@ import {
 
 // Re-export for backwards compatibility (worker/tests may import from here).
 export { runLuaScript }
+
+// ---------------------------------------------------------------------------
+// Dynamic import dengan retry + exponential backoff
+// ---------------------------------------------------------------------------
+async function importWithRetry<T>(loader: () => Promise<T>, retries = 3, baseDelayMs = 500): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await loader()
+    } catch (error) {
+      if (attempt >= retries) throw error
+      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * 2 ** attempt))
+    }
+  }
+}
 
 // Banner prepended to the obfuscated output (cosmetic only — pure text,
 // added after obfuscation, never touches the Prometheus pipeline itself).
@@ -40,10 +58,17 @@ export function withWenStudioBanner(output: string): string {
   return WEN_STUDIO_BANNER + output
 }
 
-const bootstrapLua = Object.entries(luaSources)
-  .map(([name, source]) => {
-    const chunkName = `@/src/${name.split(".").join("/")}.lua`
-    return `
+// ---------------------------------------------------------------------------
+// Bootstrap Lua: dibangun lazy, di-cache setelah pertama kali berhasil
+// ---------------------------------------------------------------------------
+let bootstrapLuaCache: string | null = null
+let bootstrapLuaPromise: Promise<string> | null = null
+
+function makeBootstrapLua(luaSources: Record<string, string>): string {
+  return Object.entries(luaSources)
+    .map(([name, source]) => {
+      const chunkName = `@/src/${name.split(".").join("/")}.lua`
+      return `
 package.preload[ ${toLuaLongString(name)} ] = function(...)
   local chunk, err = load(${toLuaLongString(source)}, ${toLuaLongString(chunkName)}, "t")
   if not chunk then
@@ -51,10 +76,38 @@ package.preload[ ${toLuaLongString(name)} ] = function(...)
   end
   return chunk(...)
 end`
-  })
-  .join("\n")
+    })
+    .join("\n")
+}
 
-export function buildRunLua(options: PrometheusOptions): string {
+/**
+ * Load sumber Lua Prometheus (chunk terpisah) + retry, lalu cache hasilnya.
+ * Kalau kode lain memanggil buildRunLua() langsung (worker/tests), panggil
+ * `await loadBootstrapLua()` dulu sekali.
+ */
+export function loadBootstrapLua(): Promise<string> {
+  if (bootstrapLuaCache !== null) return Promise.resolve(bootstrapLuaCache)
+  if (!bootstrapLuaPromise) {
+    bootstrapLuaPromise = importWithRetry(() => import("virtual:prometheus-lua"))
+      .then((mod) => {
+        const sources = (mod as { default: Record<string, string> }).default
+        bootstrapLuaCache = makeBootstrapLua(sources)
+        return bootstrapLuaCache
+      })
+      .catch((error) => {
+        // jangan simpan promise gagal, supaya percobaan berikutnya bisa retry
+        bootstrapLuaPromise = null
+        throw error
+      })
+  }
+  return bootstrapLuaPromise
+}
+
+export function buildRunLua(options: PrometheusOptions, bootstrapLua: string | null = bootstrapLuaCache): string {
+  if (bootstrapLua === null) {
+    throw new Error("Prometheus Lua sources belum dimuat. Panggil `await loadBootstrapLua()` sebelum buildRunLua().")
+  }
+
   return `
 _G.arg = _G.arg or {}
 ${bootstrapLua}
@@ -120,10 +173,11 @@ export async function runPrometheus(options: PrometheusOptions): Promise<Prometh
   let lua: Awaited<ReturnType<InstanceType<LuaFactoryConstructor>["createEngine"]>> | null = null
 
   try {
+    const bootstrapLua = await loadBootstrapLua()
     const LuaFactory = await getLuaFactoryConstructor()
     lua = await new LuaFactory(resolveWasmUri(glueWasmUrl)).createEngine({ openStandardLibs: true })
 
-    const result = (await lua.doString(buildRunLua(options))) as {
+    const result = (await lua.doString(buildRunLua(options, bootstrapLua))) as {
       ok?: unknown
       output?: unknown
       error?: unknown
