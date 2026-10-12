@@ -95,7 +95,12 @@ export function CodeEditor({ value, onChange, readOnly = false, label, className
   return (
     <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border bg-card", className)} aria-label={label}>
       <div className="flex items-center justify-between gap-2 border-b px-3 py-2 text-xs font-medium text-muted-foreground">
-        <span>{label}</span>
+        <span className="flex items-center gap-2">
+          {label}
+          <span className="font-mono text-[10px] font-normal text-muted-foreground/70">
+            {value.length.toLocaleString()} karakter
+          </span>
+        </span>
         {actionButton ? (
           <Button size="sm" onClick={actionButton.onClick} disabled={actionButton.disabled} className="h-7 px-2 text-xs">
             {actionButton.icon}
