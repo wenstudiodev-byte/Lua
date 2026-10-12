@@ -47,7 +47,7 @@ export function ChatBubble() {
   if (!uid) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
+    <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3">
       {open ? (
         <div className="flex h-[70vh] max-h-[560px] w-[88vw] max-w-sm flex-col overflow-hidden rounded-2xl border glass shadow-2xl brand-glow">
           <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
