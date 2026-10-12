@@ -561,13 +561,15 @@ function Playground({ onOpenAdmin }: { onOpenAdmin: () => void }) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <div
-                className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium"
-                title="Sisa token (1 token = 1.000 karakter)"
-              >
-                <Coins className="size-3.5 text-amber-500" />
-                <span className="font-mono">{(profile?.tokens ?? 0).toLocaleString()}</span>
-                <span className="text-muted-foreground">token</span>
+              <div className="flex flex-col items-start gap-0.5">
+                <div className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs font-medium">
+                  <Coins className="size-3.5 text-amber-500" />
+                  <span className="font-mono">{(profile?.tokens ?? 0).toLocaleString()}</span>
+                  <span className="text-muted-foreground">token</span>
+                </div>
+                <span className="px-0.5 text-[10px] leading-tight text-muted-foreground">
+                  1 token = 1.000 karakter
+                </span>
               </div>
               <span className="hidden max-w-[160px] truncate text-xs text-muted-foreground sm:inline" title={profile?.email ?? ""}>
                 {profile?.email}
